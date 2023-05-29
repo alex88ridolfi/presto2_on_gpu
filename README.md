@@ -1,3 +1,86 @@
+## New in this fork 
+29 May 2023 - Alessandro Ridolfi (alex88 dot ridolfi at gmail dot com)
+
+PRESTO2_ON_GPU makes use of CUDA samples to compile correctly.
+As of CUDA version 11.6, NVIDIA does not include the sample codes in the standard CUDA toolkit installation (https://docs.nvidia.com/cuda/cuda-samples).
+Instead, they are now only available as a separate package on GitHub (https://github.com/NVIDIA/cuda-samples).
+
+This means that, if you are using a CUDA version between 11.6 and 11.8, you will have to first install the CUDA samples separately in order to correctly compile PRESTO2_ON_GPU.
+If you do not do so, PRESTO2_ON_GPU will not compile correctly, complaining that it cannot find "helper_functions.h".
+
+Here is the **additional** step you now need to do to install PRESTO2_ON_GPU, as compared to what was needed in the past.
+
+### Step 1: Install CUDA 11.X on your machine
+
+
+### Step 2: Install the CUDA samples
+
+Go to the directory 
+
+```
+$ git clone https://github.com/NVIDIA/cuda-samples.git
+$ cd cuda-samples
+$ CUDA_SAMPLES_DIR=$(pwd)
+$ git checkout 26665bf     #Switch to the latest version of the CUDA samples compatible with CUDA 11.X
+$ make SMS="75"            #Replace 75 with your GENCODE(s), see below
+```
+
+Here 75 is the GENCODE of the NVIDIA RTX 2070 (the GPU model that I have in my workstation).
+You will need to replace 75 with the GENCODE of your GPU (see https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards)
+
+Once the CUDA samples are compiled, download the PRESTO2_ON_GPU repository, go the `src` sub-directory and edit the Makefile
+
+```
+$ git clone https://github.com/alex88ridolfi/presto2_on_gpu.git
+$ cd presto2_on_gpu/src
+$ nano Makefile          #Or use any other text editor of your choice
+```
+
+Go to line 33 and add the absolute path to the cuda-samples just installed.
+For instance, if you installed the cuda-samples in /path/to/cuda-samples, you need to change:
+
+
+```
+CUDA_SAMPLES_PATH  ?=  
+```
+to
+```
+CUDA_SAMPLES_PATH  ?= /path/to/cuda-samples
+```
+
+Finally, you need to specify for which generation/model of NVIDIA GPU you are compiling PRESTO2_ON_GPU.
+To do so uncomment the line(s) that start with
+
+```
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode [...]
+```
+which are lines 45-53 in the Makefile. For instance, since I have an RTX 2070, the line I am interested is:
+```
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_75,code=sm_75 -gencode arch=compute_75,code=sm_75    #GTX/RTX Turing – GTX 1660 Ti, RTX 2060, RTX 2070, RTX 2080, Titan RTX, Quadro RTX 4000, Quadro RTX 5000, Quadro RTX 6000, Quadro RTX 8000, Quadro T1000/T2000, Tesla T4
+```
+so, I will remove the `#`:
+```
+       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_75,code=sm_75 -gencode arch=compute_75,code=sm_75    #GTX/RTX Turing – GTX 1660 Ti, RTX 2060, RTX 2070, RTX 2080, Titan RTX, Quadro RTX 4000, Quadro RTX 5000, Quadro RTX 6000, Quadro RTX 8000, Quadro T1000/T2000, Tesla T4
+```
+
+The Makefile is now ready, so you can proceed with the usual PRESTO installation steps, namely:
+
+```
+$ export PRESTO=/path/to/presto2_on_gpu
+$ cd ${PRESTO}/src
+$ make makewisdom
+$ make prep
+$ make
+```
+
+
+
+
+
+
+## Old documentation
+
+
 # PRESTO
 
 http://www.cv.nrao.edu/~sransom/presto/

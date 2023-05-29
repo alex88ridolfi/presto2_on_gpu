@@ -1,6 +1,11 @@
 #  Makefile for PRESTO
 #   by Scott M. Ransom
 #		GPU-related sections by Jintao Luo
+#  Updated by Alessandro Ridolfi in May 2023 to deal with changes introduced by CUDA 11.6 and later.
+#
+#  WARNING: This PRESTO2_ON_GPU version will only compile with CUDA versions 11.6, 11.7 and  11.8.  CUDA 12.0 and later versions have introduced deprecations that will not make the code compile correctly.
+#
+
 
 # OS type
 OS = Linux
@@ -19,26 +24,44 @@ endif
 
 #------------------------------------------------------------------------------------------
 #determine if compile with CUDA
-use_cuda = no# yes/no
+use_cuda = yes# yes/no     #Now compiling with CUDA is the default option
 
 ifeq ($(use_cuda),yes)
 $(info Compile with CUDA)
+
+        #PUT THE ABSOLUTE PATH TO YOUR CUDA SAMPLES INSTALLED SEPARATELY, IF YOU ARE USING CUDA 11.6 to 11.8	
+        CUDA_SAMPLES_PATH  ?= 
+
+
 #******************************************************************
-#                     for GUP version, CUDA 
+#                     for GPU version, CUDA 
 # CUDA compile option
 # CUDA code generation flags
-	GENCODE_SM10    := -gencode arch=compute_10,code=sm_10
-	GENCODE_SM10    := -gencode arch=compute_11,code=sm_11
-	GENCODE_SM20    := -gencode arch=compute_20,code=sm_20
-	GENCODE_SM30    := -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
-	GENCODE_FLAGS   := $(GENCODE_SM10) $(GENCODE_SM20) $(GENCODE_SM30)
+
+        GENCODE_FLAGS   :=    #Leave this as it is
+
+#       Uncomment the generation/model(s) of NVIDIA GPU(s) that you want to compile for:
+#
+#	GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_50,code=sm_50 -gencode arch=compute_50,code=sm_50    #Tesla/Quadro Maxwell cards
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_52,code=sm_52 -gencode arch=compute_52,code=sm_52    #Quadro M6000 , GeForce 900, GTX-970, GTX-980, GTX Titan X
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_60,code=sm_60 -gencode arch=compute_60,code=sm_60    #Quadro GP100, Tesla P100, DGX-1 (Generic Pascal)
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_61,code=sm_61 -gencode arch=compute_61,code=sm_61    #GTX 1080, GTX 1070, GTX 1060, GTX 1050, GTX 1030 (GP108), GT 1010 (GP108) Titan Xp, Tesla P40, Tesla P4, Discrete GPU on the NVIDIA Drive PX2
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_70,code=sm_70 -gencode arch=compute_70,code=sm_70    #DGX-1 with Volta, Tesla V100, GTX 1180 (GV104), Titan V, Quadro GV100
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_75,code=sm_75 -gencode arch=compute_75,code=sm_75    #GTX/RTX Turing – GTX 1660 Ti, RTX 2060, RTX 2070, RTX 2080, Titan RTX, Quadro RTX 4000, Quadro RTX 5000, Quadro RTX 6000, Quadro RTX 8000, Quadro T1000/T2000, Tesla T4
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_80,code=sm_80 -gencode arch=compute_80,code=sm_80    #NVIDIA A100 (the name “Tesla” has been dropped – GA100), NVIDIA DGX-A100
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_86,code=sm_86 -gencode arch=compute_86,code=sm_86    #Tesla GA10x cards, RTX Ampere – RTX 3080, GA102 – RTX 3090, RTX A2000, A3000, RTX A4000, A5000, A6000, NVIDIA A40, GA106 – RTX 3060, GA104 – RTX 3070, GA107 – RTX 3050, RTX A10, RTX A16, RTX A40, A2 Tensor Core GPU
+#       GENCODE_FLAGS    := ${GENCODE_FLAGS} -gencode arch=compute_89,code=sm_89 -gencode arch=compute_89,code=sm_89    #NVIDIA GeForce RTX 4090, RTX 4080, RTX 4070 Ti, RTX 4070, RTX 4060 Ti, RTX 6000, Tesla L40
+
+
+
 # Location of the CUDA Toolkit binaries and libraries
 #modify it if necessary
 #CUDA_PATH       ?= /usr/local/cuda-5.0
-	CUDA_PATH       ?= /usr/local/cuda
+	CUDA_PATH       ?= /usr/local/cuda   
 
 #modify it if necessary
-	CUDA_INC_PATH   ?= -I $(CUDA_PATH)/include -I. -I.. -I $(CUDA_PATH)/samples/common/inc/ -I$(PRESTO)/include
+
+	CUDA_INC_PATH      ?= -I $(CUDA_PATH)/include -I. -I.. -I $(CUDA_PATH)/samples/common/inc/ -I $(CUDA_SAMPLES_PATH)/Common -I $(PRESTO)/include
 
 	CUDA_BIN_PATH   ?= $(CUDA_PATH)/bin
 	NVCC            ?= $(CUDA_BIN_PATH)/nvcc
@@ -94,7 +117,7 @@ ifeq ($(use_cuda),yes)
 PRESTOLINK = $(CFITSIOLINK) -L$(PRESTO)/lib -lpresto $(FFTLINK) $(CUDA_LINK_EXTRA_FLAGS) -L $(SYSDIR)/lib/x86_64-linux-gnu -lstdc++
 endif
 
-CC = gcc
+CC = gcc -std=gnu89
 FC = gfortran
 #FC = g77
 # Very recent Intel CPUs might see a few percent speedup using -mavx
@@ -105,7 +128,7 @@ CFLAGS = -I$(PRESTO)/include $(GLIBINC) $(CFITSIOINC) $(PGPLOTINC) $(FFTINC) \
 ifeq ($(use_cuda),yes)
 	CFLAGS += -DUSECUDA
 endif
-	
+
 #	-g -Wall -W -fPIC
 CLINKFLAGS = $(CFLAGS)
 # NOTE:  Be careful of upping the optimization on the
@@ -376,13 +399,13 @@ weight_psrfits: weight_psrfits.o $(INSTRUMENTOBJS)
 	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ weight_psrfits.o $(INSTRUMENTOBJS) $(PRESTOLINK)
 
 psrfits_dumparrays: psrfits_dumparrays.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ psrfits_dumparrays.o $(CFITSIOLINK)
+	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ psrfits_dumparrays.o $(CFITSIOLINK) -lm
 
 fitsdelrow: fitsdelrow.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ fitsdelrow.o $(CFITSIOLINK)
+	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ fitsdelrow.o $(CFITSIOLINK) -lm
 
 fitsdelcol: fitsdelcol.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ fitsdelcol.o $(CFITSIOLINK)
+	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ fitsdelcol.o $(CFITSIOLINK) -lm
 
 clean:
 	rm -f *.o *~ *#
