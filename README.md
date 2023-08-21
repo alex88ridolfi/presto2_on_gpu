@@ -21,7 +21,7 @@ Go to the directory
 $ git clone https://github.com/NVIDIA/cuda-samples.git
 $ cd cuda-samples
 $ CUDA_SAMPLES_DIR=$(pwd)
-$ git checkout 26665bf     #Switch to the latest version of the CUDA samples compatible with CUDA 11.X
+$ git checkout 8199209     #Switch to the latest version of the CUDA samples compatible with CUDA 11.X
 $ make SMS="75"            #Replace 75 with your GENCODE(s), see below
 ```
 
